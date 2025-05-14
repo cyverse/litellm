@@ -16,7 +16,7 @@ model LiteLLM_BudgetTable {
   tpm_limit     BigInt?
   rpm_limit     BigInt?
   model_max_budget Json?
-  budget_duration String? 
+  budget_duration String?
   budget_reset_at DateTime?
   created_at    DateTime               @default(now()) @map("created_at")
   created_by String
@@ -25,8 +25,8 @@ model LiteLLM_BudgetTable {
   organization LiteLLM_OrganizationTable[] // multiple orgs can have the same budget
   keys LiteLLM_VerificationToken[] // multiple keys can have the same budget
   end_users LiteLLM_EndUserTable[] // multiple end-users can have the same budget
-  team_membership LiteLLM_TeamMembership[] // budgets of Users within a Team 
-  organization_membership LiteLLM_OrganizationMembership[] // budgets of Users within a Organization 
+  team_membership LiteLLM_TeamMembership[] // budgets of Users within a Team
+  organization_membership LiteLLM_OrganizationMembership[] // budgets of Users within a Organization
 }
 
 // Models on proxy
@@ -34,7 +34,7 @@ model LiteLLM_CredentialsTable {
   credential_id String @id @default(uuid())
   credential_name String @unique
   credential_values Json
-  credential_info Json? 
+  credential_info Json?
   created_at    DateTime               @default(now()) @map("created_at")
   created_by String
   updated_at    DateTime               @default(now()) @updatedAt @map("updated_at")
@@ -44,9 +44,9 @@ model LiteLLM_CredentialsTable {
 // Models on proxy
 model LiteLLM_ProxyModelTable {
   model_id String @id @default(uuid())
-  model_name String 
+  model_name String
   litellm_params Json
-  model_info Json? 
+  model_info Json?
   created_at    DateTime               @default(now()) @map("created_at")
   created_by String
   updated_at    DateTime               @default(now()) @updatedAt @map("updated_at")
@@ -66,7 +66,7 @@ model LiteLLM_OrganizationTable {
     updated_at    DateTime               @default(now()) @updatedAt @map("updated_at")
     updated_by String
     litellm_budget_table LiteLLM_BudgetTable?   @relation(fields: [budget_id], references: [budget_id])
-    teams LiteLLM_TeamTable[] 
+    teams LiteLLM_TeamTable[]
     users LiteLLM_UserTable[]
     keys LiteLLM_VerificationToken[]
     members LiteLLM_OrganizationMembership[] @relation("OrganizationToMembership")
@@ -84,10 +84,10 @@ model LiteLLM_ModelTable {
 }
 
 
-// Assign prod keys to groups, not individuals 
+// Assign prod keys to groups, not individuals
 model LiteLLM_TeamTable {
 		team_id    String @id @default(uuid())
-    team_alias  String? 
+    team_alias  String?
     organization_id String?
     admins String[]
     members String[]
@@ -99,7 +99,7 @@ model LiteLLM_TeamTable {
     max_parallel_requests Int?
     tpm_limit     BigInt?
     rpm_limit     BigInt?
-    budget_duration String? 
+    budget_duration String?
     budget_reset_at DateTime?
     blocked Boolean @default(false)
     created_at    DateTime               @default(now()) @map("created_at")
@@ -115,7 +115,7 @@ model LiteLLM_TeamTable {
 // Track spend, rate limit, budget Users
 model LiteLLM_UserTable {
 		user_id    String @id
-    user_alias String? 
+    user_alias String?
     team_id    String?
     sso_user_id String? @unique
     organization_id String?
@@ -130,7 +130,7 @@ model LiteLLM_UserTable {
     max_parallel_requests Int?
     tpm_limit     BigInt?
     rpm_limit     BigInt?
-    budget_duration String? 
+    budget_duration String?
     budget_reset_at DateTime?
     allowed_cache_controls String[] @default([])
     model_spend      Json @default("{}")
@@ -165,8 +165,8 @@ model LiteLLM_VerificationToken {
     blocked Boolean?
     tpm_limit     BigInt?
     rpm_limit     BigInt?
-    max_budget Float?    
-    budget_duration String? 
+    max_budget Float?
+    budget_duration String?
     budget_reset_at DateTime?
     allowed_cache_controls String[] @default([])
     allowed_routes   String[] @default([])
@@ -221,7 +221,7 @@ model LiteLLM_SpendLogs {
   cache_hit           String?   @default("")
   cache_key           String?   @default("")
   request_tags        Json?     @default("[]")
-  team_id             String? 
+  team_id             String?
   end_user            String?
   requester_ip_address String?
   messages            Json?     @default("{}")
@@ -237,7 +237,7 @@ model LiteLLM_ErrorLogs {
   request_id          String   @id @default(uuid())
   startTime           DateTime // Assuming start_time is a DateTime field
   endTime             DateTime // Assuming end_time is a DateTime field
-  api_base            String   @default("") 
+  api_base            String   @default("")
   model_group         String   @default("")      // public model_name / model_group
   litellm_model_name  String   @default("")      // model passed to litellm
   model_id            String   @default("")      // ID of model in ProxyModelTable
@@ -250,7 +250,7 @@ model LiteLLM_ErrorLogs {
 // Beta - allow team members to request access to a model
 model LiteLLM_UserNotifications {
   request_id          String @id
-  user_id             String 
+  user_id             String
   models              String[]
   justification       String
   status              String // approved, disapproved, pending
@@ -262,7 +262,12 @@ model LiteLLM_TeamMembership {
   team_id    String
   spend      Float    @default(0.0)
   budget_id String?
-  litellm_budget_table LiteLLM_BudgetTable?   @relation(fields: [budget_id], references: [budget_id])
+  litellm_budget_table LiteLLM_BudgetTable?   @relation(
+      fields: [budget_id],
+      references: [budget_id],
+      onDelete:   Cascade,
+      onUpdate:   Cascade
+    )
   @@id([user_id, team_id])
 }
 
@@ -280,8 +285,8 @@ model LiteLLM_OrganizationMembership {
   user LiteLLM_UserTable @relation(fields: [user_id], references: [user_id])
   organization LiteLLM_OrganizationTable @relation("OrganizationToMembership", fields: [organization_id], references: [organization_id])
   litellm_budget_table LiteLLM_BudgetTable?   @relation(fields: [budget_id], references: [budget_id])
-  
-  
+
+
 
   @@id([user_id, organization_id])
   @@unique([user_id, organization_id])
@@ -314,7 +319,7 @@ model LiteLLM_AuditLog {
   action             String      // create, update, delete
   table_name         String      // on of  LitellmTableNames.TEAM_TABLE_NAME, LitellmTableNames.USER_TABLE_NAME, LitellmTableNames.PROXY_MODEL_TABLE_NAME,
   object_id          String      // id of the object being audited. This can be the key id, team id, user id, model id
-  before_value       Json?       // value of the row 
+  before_value       Json?       // value of the row
   updated_values     Json?       // value of the row after change
 }
 
@@ -323,10 +328,10 @@ model LiteLLM_DailyUserSpend {
   id                  String   @id @default(uuid())
   user_id             String
   date                String
-  api_key             String   
-  model               String   
-  model_group         String?  
-  custom_llm_provider String?  
+  api_key             String
+  model               String
+  model_group         String?
+  custom_llm_provider String?
   prompt_tokens       Int      @default(0)
   completion_tokens   Int      @default(0)
   cache_read_input_tokens     Int      @default(0)
@@ -350,10 +355,10 @@ model LiteLLM_DailyTeamSpend {
   id                  String   @id @default(uuid())
   team_id             String
   date                String
-  api_key             String   
-  model               String   
-  model_group         String?  
-  custom_llm_provider String?  
+  api_key             String
+  model               String
+  model_group         String?
+  custom_llm_provider String?
   prompt_tokens       Int      @default(0)
   completion_tokens   Int      @default(0)
   cache_read_input_tokens     Int      @default(0)
@@ -375,12 +380,12 @@ model LiteLLM_DailyTeamSpend {
 // Track daily team spend metrics per model and key
 model LiteLLM_DailyTagSpend {
   id                  String   @id @default(uuid())
-  tag                 String   
+  tag                 String
   date                String
-  api_key             String   
-  model               String   
-  model_group         String?  
-  custom_llm_provider String?  
+  api_key             String
+  model               String
+  model_group         String?
+  custom_llm_provider String?
   prompt_tokens       Int      @default(0)
   completion_tokens   Int      @default(0)
   cache_read_input_tokens     Int      @default(0)
