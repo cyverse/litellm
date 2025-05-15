@@ -262,12 +262,7 @@ model LiteLLM_TeamMembership {
   team_id    String
   spend      Float    @default(0.0)
   budget_id String?
-  litellm_budget_table LiteLLM_BudgetTable?   @relation(
-      fields: [budget_id],
-      references: [budget_id],
-      onDelete:   Cascade,
-      onUpdate:   Cascade
-    )
+  litellm_budget_table  LiteLLM_BudgetTable? @relation(fields: [budget_id], references: [budget_id], onDelete: Cascade, onUpdate: Cascade)
   @@id([user_id, team_id])
 }
 
