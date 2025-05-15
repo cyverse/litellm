@@ -1061,29 +1061,58 @@ async def team_member_update(
             break
 
     ### upsert new budget
-    if data.max_budget_in_team is not None:
-        if identified_budget_id is None:
-            _ = await prisma_client.db.litellm_budgettable.create(
-                data={
-                    "max_budget": data.max_budget_in_team,
-                    "created_by": user_api_key_dict.user_id or "",
-                    "updated_by": user_api_key_dict.user_id or "",
-                    "team_membership": {
-                        "create": {
-                        "team_id": data.team_id,
-                        "user_id": received_user_id,
-                        # set other values here?
-                        # "spend": 0.0,
+    async with prisma_client.db.tx() as tx:
+        if data.max_budget_in_team is not None:
+            if identified_budget_id is None:
+                new_budget = await tx.litellm_budgettable.create(
+                    data={
+                        "max_budget": data.max_budget_in_team,
+                        "created_by": user_api_key_dict.user_id or "",
+                        "updated_by": user_api_key_dict.user_id or "",
+                    },
+                    include={"team_membership": True},
+                )
+                await tx.litellm_teammembership.upsert(
+                    where={
+                        "user_id_team_id": {
+                            "user_id": received_user_id,
+                            "team_id": data.team_id,
                         }
                     },
-                },
-                include={"team_membership": True},
-            )
-        elif identified_budget_id is not None:
-            await prisma_client.db.litellm_budgettable.update(
-                where={"budget_id": identified_budget_id},
-                data={"max_budget": data.max_budget_in_team},
-            )
+                    data={
+                        "create": {
+                            "user_id": received_user_id,
+                            "team_id": data.team_id,
+                            "litellm_budget_table": {
+                                "connect": {"budget_id": new_budget.budget_id},
+                            },
+                        },
+                        "update": {
+                            "litellm_budget_table": {
+                                "connect": {"budget_id": new_budget.budget_id},
+                            },
+                        },
+                    },
+                )
+            elif identified_budget_id is not None:
+                await prisma_client.db.litellm_budgettable.update(
+                    where={"budget_id": identified_budget_id},
+                    data={"max_budget": data.max_budget_in_team},
+                )
+        else:
+            await tx.litellm_teammembership.update(
+            where={
+                "user_id_team_id": {
+                    "user_id": received_user_id,
+                    "team_id": data.team_id,
+                }
+            },
+            data={
+                "litellm_budget_table": {
+                    "disconnect": True
+                }
+            },
+        )
 
     ### update team member role
     if data.role is not None:
